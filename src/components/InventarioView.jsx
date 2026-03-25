@@ -1,165 +1,170 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Search, Plus, Minus, Layers, AlertCircle, RefreshCw, Save } from 'lucide-react';
+import { 
+  Package, Search, Plus, RefreshCw, X, Save, AlertCircle, Send
+} from 'lucide-react';
 import { catalogApi } from '../api/inventoryService';
-
 
 const InventarioView = () => {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState("TODOS");
+  const [filterCategory, setFilterCategory] = useState("OBRA");
+  const [showAddMaterial, setShowAddMaterial] = useState(false);
+  
+  // Estado para manejar los valores de los inputs individuales por material
+  const [inputValues, setInputValues] = useState({});
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [filterCategory]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await catalogApi.getFullInventory();
-      setInventory(res.data);
+      const res = await catalogApi.getFullInventory(filterCategory);
+      setInventory(res.data || []);
     } catch (err) {
-      console.error("Error al cargar inventario", err);
+      console.error("Error al cargar", err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleAdjustStock = async (materialId, amount) => {
+    const qty = parseInt(amount);
+    if (isNaN(qty) || qty === 0) return;
+
     try {
-      await catalogApi.updateGlobalStock(materialId, amount);
+      await catalogApi.updateGlobalStock({
+        materialId,
+        quantity: qty,
+        technicianId: null
+      });
       
       setInventory(prev => prev.map(item => 
-        item.id === materialId 
-          ? { ...item, globalStock: item.globalStock + amount } 
-          : item
+        item.id === materialId ? { ...item, globalStock: item.globalStock + qty } : item
       ));
+      
+      // Limpiar el input después de enviar
+      setInputValues(prev => ({ ...prev, [materialId]: "" }));
     } catch (err) {
-      alert("Error al actualizar stock");
-      loadData(); 
+      alert("Error en el servidor");
     }
   };
 
-  const filteredData = inventory.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === "TODOS" || item.category.name === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center h-screen text-slate-400">
-      <RefreshCw className="animate-spin mb-4" size={40} />
-      <p className="font-medium">Sincronizando Depósito Central...</p>
-    </div>
+  const filteredData = inventory.filter(item => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="max-w-6xl mx-auto p-6 animate-in fade-in duration-500">
+    <div className="max-w-[1600px] mx-auto p-4 font-sans bg-slate-50 min-h-screen">
       
-
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <header className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Depósito Central</h2>
-          <p className="text-slate-500">Gestión de existencias físicas en almacén.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase flex items-center gap-2">
+            <div className="w-2 h-8 bg-blue-600 rounded-full"></div>
+            Depósito Central
+          </h2>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Suministros / {filterCategory}</p>
         </div>
-        
-        <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
-          {[ "MATERIALES VARIOS", "MATERIALES OBRA"].map(cat => (
+
+        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+          {["OBRA", "VARIOS"].map((type) => (
             <button
-              key={cat}
-              onClick={() => setFilterCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                filterCategory === cat ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'
+              key={type}
+              onClick={() => setFilterCategory(type)}
+              className={`px-6 py-2 rounded-lg text-[10px] font-black transition-all ${
+                filterCategory === type 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              {cat === "MATERIALES VARIOS" ? "MATERIALES VARIOS" : cat}
+              {type}
             </button>
           ))}
         </div>
+        
+        <button 
+          onClick={() => setShowAddMaterial(true)}
+          className="bg-slate-900 hover:bg-black text-white px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2"
+        >
+          <Plus size={14} /> NUEVO ITEM
+        </button>
       </header>
 
-     
+      {/* BUSCADOR ESTILIZADO */}
       <div className="relative mb-6">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
         <input 
           type="text"
-          placeholder="Buscar material en el catálogo (ej: Fibra, Tarugo, Morseto...)"
-          className="w-full bg-white border-2 border-slate-100 rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-blue-500 transition-all shadow-sm text-lg"
+          placeholder={`Filtrar ${filterCategory.toLowerCase()}...`}
+          className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-6 py-4 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm font-medium"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-   
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredData.map((item) => (
-          <div key={item.id} className="bg-white rounded-3xl border border-slate-200 p-5 flex items-center justify-between hover:border-blue-200 transition-all group">
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                item.category.name === "MATERIALES OBRA" ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'
-              }`}>
-                {item.category.name === "MATERIALES OBRA" ? <Layers size={24} /> : <Package size={24} />}
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-800 leading-tight">{item.name}</h4>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  {item.category.name}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6">
-
-              <div className="text-right">
-                <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Disponible</p>
-                <span className={`text-2xl font-mono font-black ${
-                  item.globalStock <= 0 ? 'text-red-500' : 'text-slate-700'
-                }`}>
+      {loading ? (
+        <div className="flex flex-col h-64 items-center justify-center gap-4">
+          <RefreshCw className="animate-spin text-blue-500" size={32} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredData.map((item) => (
+            <div key={item.id} className="bg-white rounded-[1.5rem] border border-slate-200 p-4 flex flex-col relative hover:shadow-lg transition-all group overflow-hidden">
+              
+              {/* STOCK ARRIBA A LA DERECHA */}
+              <div className="absolute top-3 right-3 text-right">
+                <span className={`text-xl font-mono font-black ${item.globalStock <= 0 ? 'text-red-500' : 'text-slate-800'}`}>
                   {item.globalStock}
                 </span>
+                <p className="text-[8px] font-black text-slate-300 uppercase leading-none">Stock</p>
               </div>
 
-    
-              <div className="flex flex-col gap-1">
-                <div className="flex gap-1">
-                  <button 
-                    onClick={() => handleAdjustStock(item.id, 1)}
-                    className="w-8 h-8 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all font-bold"
-                  >
-                    +1
-                  </button>
-                  <button 
-                    onClick={() => handleAdjustStock(item.id, 10)}
-                    className="w-8 h-8 flex items-center justify-center bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-700 hover:text-white transition-all text-xs font-bold"
-                  >
-                    +10
-                  </button>
+              <div className="flex items-start gap-3 mb-4">
+                <div className="p-2.5 bg-slate-50 rounded-xl text-slate-400 group-hover:text-blue-500 transition-colors">
+                  <Package size={20} />
                 </div>
-                <div className="flex gap-1">
-                  <button 
-                    onClick={() => handleAdjustStock(item.id, -1)}
-                    className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all font-bold"
-                  >
-                    -1
-                  </button>
-                  <button 
-                    onClick={() => handleAdjustStock(item.id, -10)}
-                    className="w-8 h-8 flex items-center justify-center bg-red-100 text-red-700 rounded-lg hover:bg-red-700 hover:text-white transition-all text-xs font-bold"
-                  >
-                    -10
-                  </button>
+                <div className="pr-10"> {/* Espacio para el stock */}
+                  <h4 className="font-bold text-slate-700 uppercase text-[11px] leading-tight tracking-tight mb-1">
+                    {item.name}
+                  </h4>
+                  <p className="text-[9px] text-slate-300 font-mono">ID: {item.id.slice(0, 8)}</p>
                 </div>
+              </div>
+
+              {/* INPUT DE CARGA ABAJO DEL NOMBRE */}
+              <div className="mt-auto pt-3 border-t border-slate-50 flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input 
+                    type="number"
+                    placeholder="Cant."
+                    className="w-full bg-slate-50 border border-slate-100 rounded-lg pl-3 pr-8 py-2 text-xs font-bold outline-none focus:bg-white focus:border-blue-400 transition-all"
+                    value={inputValues[item.id] || ""}
+                    onChange={(e) => setInputValues({ ...inputValues, [item.id]: e.target.value })}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAdjustStock(item.id, inputValues[item.id])}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-300 font-bold">qty</span>
+                </div>
+                
+                <button 
+                  onClick={() => handleAdjustStock(item.id, inputValues[item.id])}
+                  disabled={!inputValues[item.id]}
+                  className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all"
+                >
+                  <Send size={14} />
+                </button>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* INDICADOR DE STOCK VACÍO */}
-      {filteredData.length === 0 && (
-        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center mt-6">
-          <AlertCircle className="mx-auto text-slate-300 mb-2" size={48} />
-          <p className="text-slate-500 font-medium">No se encontraron materiales con ese nombre.</p>
+      {/* FOOTER / EMPTY STATE */}
+      {!loading && filteredData.length === 0 && (
+        <div className="text-center py-20 bg-white rounded-[2rem] border border-dashed border-slate-200">
+          <AlertCircle className="mx-auto text-slate-200 mb-2" size={40} />
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Sin resultados</p>
         </div>
       )}
     </div>

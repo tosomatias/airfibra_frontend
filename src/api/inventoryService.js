@@ -1,14 +1,25 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_URL = `${API_BASE}/airFibra/inventory`;
 
 export const catalogApi = {
-  // Trae todo el material agrupado por categoría (podes usar el endpoint de inventory o uno nuevo)
-  getFullInventory: () => axios.get(`${API_URL}/inventory/full`), // Endpoint sugerido basado en tu CatalogService
+  // Trae sub-items filtrados: /catalog?type=OBRA o VARIOS
+  getFullInventory: (type) => 
   
-  // Actualización manual de stock global
-  updateGlobalStock: (materialId, quantityToAdd) => 
-    axios.post(`${API_URL}/inventory/bulk`, { 
-      updates: [{ materialId, quantityToAdd }] 
-    })
+    axios.get(`${API_URL}/catalog`, { params: { type } }),
+
+  // Actualización de stock: /update
+  updateGlobalStock: (payload) => 
+    axios.post(`${API_URL}/update`, payload),
+
+  // Consumo histórico: /range/:id?start=...&end=...
+  getStats: (materialId, start, end) => 
+    axios.get(`${API_URL}/range/${materialId}`, { 
+      params: { start, end } 
+    }),
+    
+  // Crear nuevo material: /material
+  createMaterial: (data) => 
+    axios.post(`${API_URL}/material`, data)
 };
