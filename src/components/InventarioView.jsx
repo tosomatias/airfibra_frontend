@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Package, Search, Plus, RefreshCw, X, Save, AlertCircle, Send, CheckCircle2 
+  Package, Search, Plus, RefreshCw, X, Save, AlertCircle, Send, CheckCircle2, BarChart3 
 } from 'lucide-react';
 import { catalogApi } from '../api/inventoryService';
+import HistoryModal from './HistoryModal'; // Asegúrate de crear este archivo con el código anterior
 
 const InventarioView = () => {
   const [inventory, setInventory] = useState([]);
@@ -10,9 +11,10 @@ const InventarioView = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("OBRA");
   
-  // Estado para la notificación (Popup)
+  // Estados para UI
   const [notification, setNotification] = useState({ show: false, message: "" });
   const [inputValues, setInputValues] = useState({});
+  const [selectedHistory, setSelectedHistory] = useState(null); // Estado para el Modal
 
   useEffect(() => {
     loadData();
@@ -35,22 +37,17 @@ const InventarioView = () => {
     if (isNaN(qty) || qty === 0) return;
 
     try {
-      // 1. Llamada a la API
       await catalogApi.updateGlobalStock({
         materialId,
         quantity: qty,
         technicianId: null
       });
       
-      // 2. Actualización automática del estado local
       setInventory(prev => prev.map(item => 
         item.id === materialId ? { ...item, globalStock: item.globalStock + qty } : item
       ));
       
-      // 3. Limpiar input
       setInputValues(prev => ({ ...prev, [materialId]: "" }));
-
-      // 4. Mostrar Popup de éxito
       showPopup("¡Stock actualizado correctamente!");
       
     } catch (err) {
@@ -58,7 +55,6 @@ const InventarioView = () => {
     }
   };
 
-  // Función para manejar el popup temporal
   const showPopup = (msg) => {
     setNotification({ show: true, message: msg });
     setTimeout(() => setNotification({ show: false, message: "" }), 3000);
@@ -71,6 +67,14 @@ const InventarioView = () => {
   return (
     <div className="max-w-[1600px] mx-auto p-4 font-sans bg-slate-50 min-h-screen relative">
       
+      {/* MODAL DE HISTORIAL */}
+      {selectedHistory && (
+        <HistoryModal 
+          material={selectedHistory} 
+          onClose={() => setSelectedHistory(null)} 
+        />
+      )}
+
       {/* POPUP DE ÉXITO (Toast) */}
       {notification.show && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
@@ -144,13 +148,21 @@ const InventarioView = () => {
                 </div>
               </div>
 
+              {/* BOTÓN VER HISTORIAL */}
+              <button 
+                onClick={() => setSelectedHistory(item)}
+                className="mb-4 w-full py-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-slate-500 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-all flex items-center justify-center gap-2 border border-slate-100 group-hover:border-blue-100"
+              >
+                <BarChart3 size={12} /> Ver Historial
+              </button>
+
               <div className="mt-auto space-y-2">
                 <label className="text-[8px] font-black text-slate-400 uppercase ml-1">Cargar/Descargar</label>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <input 
                       type="number"
-                      placeholder="Ej: 10 o -5"
+                      placeholder="Ej: 10"
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-3 pr-8 py-2.5 text-xs font-bold outline-none focus:bg-white focus:border-blue-400 transition-all shadow-inner"
                       value={inputValues[item.id] || ""}
                       onChange={(e) => setInputValues({ ...inputValues, [item.id]: e.target.value })}
