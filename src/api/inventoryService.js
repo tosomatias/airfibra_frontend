@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_BASE = import.meta.env.VITE_API_URL;
 const API_URL = `${API_BASE}/airFibra/inventory`;
 
 export const catalogApi = {
@@ -14,12 +14,13 @@ export const catalogApi = {
     axios.post(`${API_URL}/update`, payload),
 
   // Consumo histórico: /range/:id?start=...&end=...
-  getStats: (materialId, start, end) => 
+  getStats: (materialId, start, end,techId) => 
+   
     axios.get(`${API_URL}/range/${materialId}`, { 
-      params: { start, end } 
+      params: { start, end ,techId} 
     }),
     
-  // Crear nuevo material: /material
+
   createMaterial: (data) => 
     axios.post(`${API_URL}/material`, data)
 };
