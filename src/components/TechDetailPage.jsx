@@ -118,7 +118,7 @@ const TechDetailPage = ({ techId, onBack }) => {
           </div>
           <div className="min-w-0">
             <h2 className="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tighter truncate">
-              {techData.firstName} {techData.lastName}
+              {/* {techData.firstName} {techData.lastName} */}
             </h2>
             <p className="text-[9px] text-slate-400 font-mono tracking-widest uppercase">
               ID: {techData.id.slice(0, 12)}...

@@ -3,9 +3,12 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_API_URL;
 const API_URL = `${API_BASE}/airFibra/technicians`;
 
-const getHeaders = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` }
-});
+const getHeaders = () => {
+  const token = localStorage.getItem('admin_token');
+  return {
+    headers: { Authorization: `Bearer ${token}` }
+  };
+};
 
 export const technicianApi = {
   search: (query) => 
