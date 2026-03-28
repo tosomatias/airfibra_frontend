@@ -22,7 +22,7 @@ const Login = () => {
         if (response.data.user) {
           localStorage.setItem('admin_role', response.data.user.role);
         }
-        navigate('/dashboard');
+        navigate('/home');
       }
     } catch (error) {
 

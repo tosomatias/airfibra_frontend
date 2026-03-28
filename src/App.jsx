@@ -1,75 +1,74 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-/**
- * PAGE IMPORTS
- * Ensure these components exist in your /pages directory.
- */
+// IMPORTS
 import Login from './pages/Login';
+import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import Navbar from './components/Navbar';
+import AllTech from './pages/tech/AllTech';
+import TechId from './pages/tech/TechId';
 
-/**
- * AUTHENTICATION UTILITY (Internal Logic)
- * Verifies if a valid session exists in the browser's storage.
- * @returns {boolean} True if the administrative token is present.
- */
 const checkAuthStatus = () => {
-  // We look for a JSON Web Token (JWT) in local storage
-  const adminToken = localStorage.getItem('admin_token');
-  return !!adminToken; // Logical NOT operator to convert string/null to boolean
+  const token = localStorage.getItem('admin_token');
+  return !!token; 
 };
 
-/**
- * PROTECTED ROUTE COMPONENT (HOC Pattern)
- * Wraps private views to prevent unauthorized access.
- * If no token is found, it forces a redirect to the Login page.
- */
 const ProtectedRoute = ({ children }) => {
-  const isAuthorized = checkAuthStatus();
-
-  if (!isAuthorized) {
-    // We use 'replace' to overwrite the history entry so the user
-    // can't navigate back to a protected area without logging in.
+  // Si no hay token, mandamos a login
+  if (!checkAuthStatus()) {
     return <Navigate to="/login" replace />;
   }
-
   return children;
 };
 
-/**
- * MAIN APPLICATION COMPONENT
- * Handles routing logic and global layout styles.
- */
+const AuthLayout = ({ children }) => (
+  <>
+    <Navbar />
+    <main className="min-h-screen bg-slate-50 pt-16"> {/* Añadí pt-16 para que el Navbar no tape el contenido */}
+      {children}
+    </main>
+  </>
+);
+
 function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans antialiased text-slate-900">
       <Routes>
-        {/* PUBLIC ROUTE: The entry point for Administrators */}
+        {/* RUTA PÚBLICA: No debe estar protegida */}
         <Route path="/login" element={<Login />} />
 
-        {/* PROTECTED ROUTE: Employee Management System (Province Module) */}
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } 
-        />
+        {/* REDIRECCIÓN RAÍZ: Si entra a "/", va a "/home" y el ProtectedRoute decidirá si lo manda a Login */}
+        <Route path="/" element={<Navigate to="/home" replace />} />
 
-        {/* DEFAULT NAVIGATION: Redirects root to Dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        {/* RUTAS PROTEGIDAS */}
+        <Route path="/home" element={
+          <ProtectedRoute>
+            <AuthLayout><Home /></AuthLayout>
+          </ProtectedRoute>
+        } />
+          <Route path="allTech" element={
+          <ProtectedRoute>
+            <AuthLayout><AllTech/></AuthLayout>
+          </ProtectedRoute>
+        } />
+          <Route path="techId/:id" element={
+          <ProtectedRoute>
+            <AuthLayout><TechId/></AuthLayout>
+          </ProtectedRoute>
+        } />
+        
+        
+        
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <AuthLayout><Dashboard /></AuthLayout>
+          </ProtectedRoute>
+        } />
 
-        {/* CATCH-ALL ROUTE: Handles 404 - Not Found errors */}
-        <Route 
-          path="*" 
-          element={
-            <div className="flex flex-col items-center justify-center min-h-screen text-slate-400">
-              <h1 className="text-4xl font-bold">404</h1>
-              <p className="text-sm uppercase tracking-widest mt-2">Resource Not Found</p>
-            </div>
-          } 
-        />
+
+        {/* 404 */}
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </div>
   );
